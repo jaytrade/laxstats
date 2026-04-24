@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>LAX Stats Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0a1628;
+    --navy-light: #142240;
+    --navy-mid: #1e3a5f;
+    --gold: #f5a623;
+    --gold-light: #ffc94d;
+    --gold-dim: #c47f0f;
+    --white: #ffffff;
+    --off-white: #f0f4ff;
+    --muted: #8fa8c8;
+    --danger: #e84040;
+    --success: #2ecc71;
+    --card-bg: #152035;
+    --border: rgba(245,166,35,0.2);
+    --text: #d6e4f7;
+  }
+
+  body {
+    background: var(--navy);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* SETUP SCREEN */
+  #setup-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+  }
+
+  .setup-logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .setup-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--white);
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 32px;
+  }
+
+  .setup-title span { color: var(--gold); }
+
+  .setup-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .field-group {
+    margin-bottom: 16px;
+  }
+
+  .field-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .field-input {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(245,166,35,0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--white);
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .field-input:focus {
+    border-color: var(--gold);
+    background: rgba(245,166,35,0.08);
+  }
+
+  .field-static {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .field-static strong { color: var(--text); }
+
+  .confirm-btn {
+    width: 100%;
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 12px;
+    padding: 18px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+  }
+
+  .confirm-btn:active {
+    background: var(--gold-dim);
+    transform: scale(0.98);
+  }
+
+  /* TRACKER SCREEN */
+  #tracker-screen { display: none; flex-direction: column; min-height: 100vh; }
+
+  /* HEADER */
+  .game-header {
+    background: linear-gradient(135deg, var(--navy-mid) 0%, var(--navy-light) 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 14px 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-row1 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .tournament-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .game-number-badge {
+    background: var(--gold);
+    color: var(--navy);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .header-row2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .player-number {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .player-details { display: flex; flex-direction: column; }
+
+  .player-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .vs-text {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .vs-text strong { color: var(--text); }
+
+  .reset-btn {
+    background: rgba(232,64,64,0.15);
+    border: 1px solid rgba(232,64,64,0.4);
+    color: #e84040;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s;
+    -webkit-appearance: none;
+  }
+
+  .reset-btn:active { background: rgba(232,64,64,0.3); }
+
+  /* STAT BUTTONS GRID */
+  .stats-area {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 2px;
+    margin-top: 6px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 12px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    transition: transform 0.08s, background 0.1s, border-color 0.1s;
+    position: relative;
+    overflow: hidden;
+    -webkit-appearance: none;
+    min-height: 82px;
+    text-align: left;
+  }
+
+  .stat-btn:active {
+    transform: scale(0.96);
+    background: rgba(245,166,35,0.12);
+    border-color: var(--gold);
+  }
+
+  .stat-btn.flash {
+    animation: flashBtn 0.25s ease-out;
+  }
+
+  @keyframes flashBtn {
+    0% { background: rgba(245,166,35,0.35); border-color: var(--gold); }
+    100% { background: var(--card-bg); border-color: var(--border); }
+  }
+
+  .stat-count {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Color accent strips */
+  .stat-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .cat-positive::before { background: var(--gold); }
+  .cat-shot::before { background: #4a9eff; }
+  .cat-turnover::before { background: var(--danger); }
+  .cat-neutral::before { background: #7a6fff; }
+
+  .cat-positive .stat-count { color: var(--gold); }
+  .cat-shot .stat-count { color: #4a9eff; }
+  .cat-turnover .stat-count { color: var(--danger); }
+  .cat-neutral .stat-count { color: #a89cff; }
+
+  /* SAVE BUTTON */
+  .save-area {
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+
+  .save-btn {
+    width: 100%;
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 14px;
+    padding: 20px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-appearance: none;
+  }
+
+  .save-btn:active { background: var(--gold-dim); transform: scale(0.98); }
+
+  /* SUMMARY MODAL */
+  #summary-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  #summary-overlay.show { display: flex; align-items: flex-start; justify-content: center; }
+
+  .summary-card {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 480px;
+    padding: 24px 20px;
+    margin: auto;
+  }
+
+  .summary-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .summary-badge {
+    display: inline-block;
+    background: var(--gold);
+    color: var(--navy);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .summary-player {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--white);
+    text-transform: uppercase;
+  }
+
+  .summary-meta {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .summary-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .summary-stat-row {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .summary-stat-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .summary-stat-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--white);
+  }
+
+  .summary-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .dl-btn {
+    width: 100%;
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-appearance: none;
+    transition: background 0.15s;
+  }
+
+  .dl-btn:active { background: var(--gold-dim); }
+
+  .close-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 16px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+
+  .close-btn:active { background: rgba(255,255,255,0.06); }
+
+  /* Confirm dialog */
+  #reset-confirm {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  #reset-confirm.show { display: flex; }
+
+  .confirm-card {
+    background: var(--navy-light);
+    border: 1px solid rgba(232,64,64,0.4);
+    border-radius: 16px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+  }
+
+  .confirm-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--danger);
+    margin-bottom: 8px;
+  }
+
+  .confirm-text {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .confirm-btns { display: flex; gap: 10px; }
+
+  .btn-yes {
+    flex: 1;
+    background: var(--danger);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+
+  .btn-no {
+    flex: 1;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+  <div class="setup-logo">Ben Brausewetter · #24</div>
+  <div class="setup-title">LAX STATS<br><span>TRACKER</span></div>
+
+  <div class="setup-card">
+    <div class="field-group">
+      <label class="field-label" for="tournament-input">Tournament Name</label>
+      <input class="field-input" id="tournament-input" type="text" placeholder="e.g. Shore Shootout" autocomplete="off">
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="game-number-input">Game Number</label>
+      <input class="field-input" id="game-number-input" type="text" placeholder="e.g. Game 1" autocomplete="off">
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="opponent-input">Opponent Team</label>
+      <input class="field-input" id="opponent-input" type="text" placeholder="e.g. Lacey Tigers" autocomplete="off">
+    </div>
+    <div class="field-group">
+      <span class="field-label">Player</span>
+      <div class="field-static"><strong>Ben Brausewetter</strong> &nbsp;·&nbsp; #24</div>
+    </div>
+    <button class="confirm-btn" onclick="startTracking()">Start Tracking ›</button>
+  </div>
+</div>
+
+<!-- TRACKER SCREEN -->
+<div id="tracker-screen">
+  <!-- STICKY HEADER -->
+  <div class="game-header">
+    <div class="header-row1">
+      <span class="tournament-name" id="hdr-tournament">Tournament</span>
+      <span class="game-number-badge" id="hdr-game">Game 1</span>
+    </div>
+    <div class="header-row2">
+      <div class="player-info">
+        <div class="player-number">#24</div>
+        <div class="player-details">
+          <div class="player-name">Ben Brausewetter</div>
+          <div class="vs-text">vs <strong id="hdr-opponent">Opponent</strong></div>
+        </div>
+      </div>
+      <button class="reset-btn" onclick="showResetConfirm()">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- STAT BUTTONS -->
+  <div class="stats-area">
+
+    <div class="section-label">Scoring</div>
+    <div class="stats-grid">
+      <button class="stat-btn cat-positive" onclick="increment('goals')">
+        <span class="stat-count" id="count-goals">0</span>
+        <span class="stat-label">Goal</span>
+      </button>
+      <button class="stat-btn cat-positive" onclick="increment('assists')">
+        <span class="stat-count" id="count-assists">0</span>
+        <span class="stat-label">Assist</span>
+      </button>
+    </div>
+
+    <div class="section-label">Shots</div>
+    <div class="stats-grid">
+      <button class="stat-btn cat-shot" onclick="increment('shotsOn')">
+        <span class="stat-count" id="count-shotsOn">0</span>
+        <span class="stat-label">Shot on Goal</span>
+      </button>
+      <button class="stat-btn cat-shot" onclick="increment('shotsOff')">
+        <span class="stat-count" id="count-shotsOff">0</span>
+        <span class="stat-label">Shot off Goal</span>
+      </button>
+    </div>
+
+    <div class="section-label">Defense / Transition</div>
+    <div class="stats-grid">
+      <button class="stat-btn cat-neutral" onclick="increment('clears')">
+        <span class="stat-count" id="count-clears">0</span>
+        <span class="stat-label">Clear</span>
+      </button>
+      <button class="stat-btn cat-neutral" onclick="increment('groundBalls')">
+        <span class="stat-count" id="count-groundBalls">0</span>
+        <span class="stat-label">Ground Ball</span>
+      </button>
+      <button class="stat-btn cat-positive" onclick="increment('causedTurnovers')">
+        <span class="stat-count" id="count-causedTurnovers">0</span>
+        <span class="stat-label">Caused Turnover</span>
+      </button>
+      <button class="stat-btn cat-turnover" onclick="increment('turnovers')">
+        <span class="stat-count" id="count-turnovers">0</span>
+        <span class="stat-label">Turnover</span>
+      </button>
+    </div>
+
+    <div class="section-label">Penalties</div>
+    <div class="stats-grid">
+      <button class="stat-btn cat-turnover" onclick="increment('offsides')">
+        <span class="stat-count" id="count-offsides">0</span>
+        <span class="stat-label">Offside</span>
+      </button>
+      <button class="stat-btn cat-turnover" onclick="increment('fouls')">
+        <span class="stat-count" id="count-fouls">0</span>
+        <span class="stat-label">Foul / Penalty</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- SAVE BUTTON -->
+  <div class="save-area">
+    <button class="save-btn" onclick="showSummary()">💾 &nbsp;Save Stats</button>
+  </div>
+</div>
+
+<!-- SUMMARY OVERLAY -->
+<div id="summary-overlay">
+  <div class="summary-card">
+    <div class="summary-header">
+      <div class="summary-badge" id="sum-badge">Game 1</div>
+      <div class="summary-player">Ben Brausewetter</div>
+      <div class="summary-meta">#24 &nbsp;·&nbsp; <span id="sum-tournament">Tournament</span> &nbsp;·&nbsp; vs <span id="sum-opponent">Opponent</span></div>
+    </div>
+
+    <div class="summary-stats-grid" id="summary-stats-grid"></div>
+
+    <div class="summary-actions">
+      <button class="dl-btn" onclick="downloadStats()">⬇ &nbsp;Download .txt</button>
+      <button class="close-btn" onclick="closeSummary()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET CONFIRM -->
+<div id="reset-confirm">
+  <div class="confirm-card">
+    <div class="confirm-title">Reset All Stats?</div>
+    <div class="confirm-text">This will clear all counters for this game. Game details will stay.</div>
+    <div class="confirm-btns">
+      <button class="btn-yes" onclick="confirmReset()">Reset</button>
+      <button class="btn-no" onclick="cancelReset()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STAT_LABELS = {
+    goals: 'Goal',
+    assists: 'Assist',
+    shotsOn: 'Shot on Goal',
+    shotsOff: 'Shot off Goal',
+    clears: 'Clear',
+    groundBalls: 'Ground Ball',
+    causedTurnovers: 'Caused Turnover',
+    turnovers: 'Turnover',
+    offsides: 'Offside',
+    fouls: 'Foul / Penalty'
+  };
+
+  let stats = {};
+  let gameInfo = {};
+
+  function resetStats() {
+    stats = {
+      goals: 0, assists: 0, shotsOn: 0, shotsOff: 0,
+      clears: 0, groundBalls: 0, causedTurnovers: 0,
+      turnovers: 0, offsides: 0, fouls: 0
+    };
+    Object.keys(stats).forEach(k => {
+      const el = document.getElementById('count-' + k);
+      if (el) el.textContent = '0';
+    });
+  }
+
+  function startTracking() {
+    const tournament = document.getElementById('tournament-input').value.trim() || 'Tournament';
+    const gameNum = document.getElementById('game-number-input').value.trim() || 'Game';
+    const opponent = document.getElementById('opponent-input').value.trim() || 'Opponent';
+
+    gameInfo = { tournament, gameNum, opponent };
+
+    document.getElementById('hdr-tournament').textContent = tournament;
+    document.getElementById('hdr-game').textContent = gameNum;
+    document.getElementById('hdr-opponent').textContent = opponent;
+
+    resetStats();
+
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('tracker-screen').style.display = 'flex';
+  }
+
+  function increment(key) {
+    stats[key]++;
+    const el = document.getElementById('count-' + key);
+    if (el) {
+      el.textContent = stats[key];
+      const btn = el.closest('.stat-btn');
+      if (btn) {
+        btn.classList.remove('flash');
+        void btn.offsetWidth;
+        btn.classList.add('flash');
+      }
+    }
+  }
+
+  function showResetConfirm() {
+    document.getElementById('reset-confirm').classList.add('show');
+  }
+
+  function cancelReset() {
+    document.getElementById('reset-confirm').classList.remove('show');
+  }
+
+  function confirmReset() {
+    resetStats();
+    document.getElementById('reset-confirm').classList.remove('show');
+  }
+
+  function showSummary() {
+    document.getElementById('sum-badge').textContent = gameInfo.gameNum;
+    document.getElementById('sum-tournament').textContent = gameInfo.tournament;
+    document.getElementById('sum-opponent').textContent = gameInfo.opponent;
+
+    const grid = document.getElementById('summary-stats-grid');
+    grid.innerHTML = '';
+
+    Object.entries(stats).forEach(([key, val]) => {
+      const row = document.createElement('div');
+      row.className = 'summary-stat-row';
+      row.innerHTML = `<span class="summary-stat-label">${STAT_LABELS[key]}</span><span class="summary-stat-value">${val}</span>`;
+      grid.appendChild(row);
+    });
+
+    document.getElementById('summary-overlay').classList.add('show');
+  }
+
+  function closeSummary() {
+    document.getElementById('summary-overlay').classList.remove('show');
+  }
+
+  function downloadStats() {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    let txt = '';
+    txt += '================================\n';
+    txt += '   LAX GAME STATS REPORT\n';
+    txt += '================================\n';
+    txt += `Player:      Ben Brausewetter (#24)\n`;
+    txt += `Tournament:  ${gameInfo.tournament}\n`;
+    txt += `Game:        ${gameInfo.gameNum}\n`;
+    txt += `Opponent:    vs ${gameInfo.opponent}\n`;
+    txt += `Saved:       ${dateStr} at ${timeStr}\n`;
+    txt += '--------------------------------\n';
+    txt += '         STATISTICS\n';
+    txt += '--------------------------------\n';
+
+    Object.entries(stats).forEach(([key, val]) => {
+      const label = STAT_LABELS[key].padEnd(22, ' ');
+      txt += `${label}${val}\n`;
+    });
+
+    const totalShots = stats.shotsOn + stats.shotsOff;
+    txt += '--------------------------------\n';
+    txt += `${'Total Shots'.padEnd(22)}${totalShots}\n`;
+    txt += '================================\n';
+
+    const blob = new Blob([txt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (gameInfo.opponent || 'game').replace(/\s+/g, '_');
+    a.href = url;
+    a.download = `BenBrausewetter_#24_${safeName}_stats.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Enter key on last input
+  document.getElementById('opponent-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startTracking();
+  });
+</script>
+</body>
+</html>
