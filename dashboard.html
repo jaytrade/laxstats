@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ben's LAX Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#0a0e1a; --surface:#121829; --card:#1a2235; --border:#2a3550; --accent:#00e5ff; --accent2:#ff4757; --accent3:#2ed573; --gold:#ffd32a; --text:#e8edf5; --muted:#6b7a99; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  .header { background:linear-gradient(135deg,#0d1f3c,#0a1628); border-bottom:2px solid var(--accent); padding:20px 24px; box-shadow:0 4px 24px rgba(0,229,255,.15); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .header-left .subtitle { font-size:11px; letter-spacing:3px; color:var(--accent); opacity:.7; font-family:'Bebas Neue',sans-serif; }
+  .header-left .title { font-family:'Bebas Neue',sans-serif; font-size:36px; color:var(--text); line-height:1; }
+  .header-left .title span { color:var(--accent); }
+  .refresh-btn { background:var(--card); border:1.5px solid var(--border); border-radius:10px; color:var(--accent); font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:1px; padding:10px 20px; cursor:pointer; }
+  .spinner-wrap { text-align:center; padding:80px 20px; color:var(--muted); font-size:16px; }
+  .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 16px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .dashboard { padding:24px; max-width:1200px; margin:0 auto; }
+  .scorecards { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:28px; }
+  .scorecard { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 14px; text-align:center; }
+  .scorecard.green { border-color:rgba(46,213,115,.4); }
+  .scorecard.cyan { border-color:rgba(0,229,255,.4); }
+  .scorecard.gold { border-color:rgba(255,211,42,.4); }
+  .scorecard.red { border-color:rgba(255,71,87,.4); }
+  .sc-label { font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .sc-num { font-family:'Bebas Neue',sans-serif; font-size:48px; line-height:1; }
+  .scorecard.green .sc-num { color:var(--accent3); }
+  .scorecard.cyan .sc-num { color:var(--accent); }
+  .scorecard.gold .sc-num { color:var(--gold); }
+  .scorecard.red .sc-num { color:var(--accent2); }
+  .sc-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+  .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:28px; }
+  @media(max-width:700px) { .charts-grid { grid-template-columns:1fr; } }
+  .chart-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; }
+  .chart-card.full { grid-column:span 2; }
+  @media(max-width:700px) { .chart-card.full { grid-column:span 1; } }
+  .chart-title { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1px; color:var(--text); margin-bottom:4px; }
+  .chart-sub { font-size:12px; color:var(--muted); margin-bottom:16px; }
+  .table-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:28px; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1px; color:var(--muted); text-align:left; padding:8px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  td { padding:10px 12px; border-bottom:1px solid rgba(42,53,80,.5); color:var(--text); white-space:nowrap; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(0,229,255,.04); }
+  td.num { font-family:'Bebas Neue',sans-serif; font-size:16px; text-align:center; }
+  td.goal-cell { color:var(--accent3); }
+  td.assist-cell { color:var(--gold); }
+  .last-updated { text-align:right; font-size:11px; color:var(--muted); padding-bottom:24px; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="subtitle">SEASON DASHBOARD</div>
+    <div class="title">BEN <span>BRAUSEWETTER</span> #24</div>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">↻ REFRESH</button>
+</div>
+
+<div id="loadingState" class="spinner-wrap">
+  <div class="spinner"></div>
+  Loading stats...
+</div>
+
+<div id="dashboardContent" class="dashboard hidden">
+  <div class="scorecards" id="scorecards"></div>
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <div class="chart-title">Performance Per Game</div>
+      <div class="chart-sub">Goals, assists, and shots across all games</div>
+      <canvas id="chartPerGame" height="100"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Shot Breakdown</div>
+      <div class="chart-sub">Goals vs shots on goal vs shots off goal</div>
+      <canvas id="chartShots" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Possession Stats</div>
+      <div class="chart-sub">Ground balls, caused TOs, turnovers, clears</div>
+      <canvas id="chartPossession" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Discipline</div>
+      <div class="chart-sub">Fouls and offsides per game</div>
+      <canvas id="chartDiscipline" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Shooting Efficiency</div>
+      <div class="chart-sub">Goals as % of total shots per game</div>
+      <canvas id="chartEfficiency" height="200"></canvas>
+    </div>
+  </div>
+  <div class="table-card">
+    <div class="chart-title">Game Log</div>
+    <div class="chart-sub" style="margin-bottom:14px">All games this season</div>
+    <table>
+      <thead><tr>
+        <th>Game</th><th>Tournament</th><th>Opponent</th><th>Date</th>
+        <th>Goals</th><th>SOG</th><th>SOffG</th><th>Ast</th>
+        <th>GB</th><th>CTO</th><th>TO</th><th>Clr</th><th>Foul</th><th>OS</th>
+      </tr></thead>
+      <tbody id="gameTableBody"></tbody>
+    </table>
+  </div>
+  <div class="last-updated" id="lastUpdated"></div>
+</div>
+
+<script>
+  const SHEET_ID = '1eKdAMQEhNznRQlqqJelV4lPlV8wWwIsSUrgp1oon2Og';
+  let charts = {};
+
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+  async function loadData() {
+    show('loadingState');
+    hide('dashboardContent');
+    try {
+      const url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&t=' + Date.now();
+      const res = await fetch(url);
+      const text = await res.text();
+      const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/)[1]);
+      const rows = json.table.rows;
+      if (!rows || rows.length === 0) { hide('loadingState'); show('dashboardContent'); return; }
+      const data = rows.map(r => ({
+        game: r.c[0]?.v ?? '',
+        tournament: r.c[1]?.v ?? '',
+        opponent: r.c[2]?.v ?? '',
+        date: (() => { const v = r.c[3]?.v; if (!v) return ''; if (typeof v === 'string' && v.startsWith('Date(')) { const [y,m,d] = v.replace('Date(','').replace(')','').split(','); return new Date(y, m, d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); } return v; })(),
+        goals: Number(r.c[4]?.v)||0,
+        shotOn: Number(r.c[5]?.v)||0,
+        shotOff: Number(r.c[6]?.v)||0,
+        assists: Number(r.c[7]?.v)||0,
+        clears: Number(r.c[8]?.v)||0,
+        offsides: Number(r.c[9]?.v)||0,
+        groundballs: Number(r.c[10]?.v)||0,
+        causedTO: Number(r.c[11]?.v)||0,
+        turnovers: Number(r.c[12]?.v)||0,
+        fouls: Number(r.c[13]?.v)||0,
+      }));
+      renderDashboard(data);
+      hide('loadingState');
+      show('dashboardContent');
+      document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleString();
+    } catch(e) {
+      hide('loadingState');
+      show('dashboardContent');
+    }
+  }
+
+  function sum(data,key) { return data.reduce((a,r)=>a+r[key],0); }
+  function avg(data,key) { return data.length?(sum(data,key)/data.length).toFixed(1):0; }
+
+  function renderDashboard(data) {
+    const totalGoals = sum(data,'goals');
+    const totalShots = sum(data,'goals')+sum(data,'shotOn')+sum(data,'shotOff');
+    const shootPct = totalShots>0?Math.round(totalGoals/totalShots*100):0;
+    const sc = [
+      {label:'Games',val:data.length,sub:'',color:'cyan'},
+      {label:'Total Goals',val:totalGoals,sub:avg(data,'goals')+' per game',color:'green'},
+      {label:'Total Assists',val:sum(data,'assists'),sub:avg(data,'assists')+' per game',color:'gold'},
+      {label:'Shoot %',val:shootPct+'%',sub:totalGoals+' goals / '+totalShots+' shots',color:'green'},
+      {label:'Ground Balls',val:sum(data,'groundballs'),sub:avg(data,'groundballs')+' per game',color:'cyan'},
+      {label:'Caused TOs',val:sum(data,'causedTO'),sub:avg(data,'causedTO')+' per game',color:'green'},
+      {label:'Turnovers',val:sum(data,'turnovers'),sub:avg(data,'turnovers')+' per game',color:'red'},
+      {label:'Fouls',val:sum(data,'fouls'),sub:avg(data,'fouls')+' per game',color:'red'},
+    ];
+    document.getElementById('scorecards').innerHTML = sc.map(s=>`<div class="scorecard ${s.color}"><div class="sc-label">${s.label}</div><div class="sc-num">${s.val}</div><div class="sc-sub">${s.sub}</div></div>`).join('');
+
+    Object.values(charts).forEach(c=>c.destroy());
+    charts={};
+
+    const labels = data.map(d=>'G'+d.game+(d.opponent?' vs '+d.opponent:''));
+    const gc='rgba(42,53,80,0.6)', tc='#6b7a99';
+    const baseOpts = ()=>({responsive:true,plugins:{legend:{labels:{color:tc,font:{family:'DM Sans',size:12}}}},scales:{x:{grid:{color:gc},ticks:{color:tc}},y:{grid:{color:gc},ticks:{color:tc},beginAtZero:true}}});
+    const cd={borderRadius:4,borderSkipped:false};
+
+    charts.perGame=new Chart(document.getElementById('chartPerGame'),{type:'bar',data:{labels,datasets:[
+      {label:'Goals',data:data.map(d=>d.goals),backgroundColor:'rgba(46,213,115,.8)',...cd},
+      {label:'Assists',data:data.map(d=>d.assists),backgroundColor:'rgba(255,211,42,.8)',...cd},
+      {label:'Shots On Goal',data:data.map(d=>d.shotOn),backgroundColor:'rgba(0,229,255,.6)',...cd},
+      {label:'Shots Off Goal',data:data.map(d=>d.shotOff),backgroundColor:'rgba(0,229,255,.25)',...cd},
+    ]},options:baseOpts()});
+
+    charts.shots=new Chart(document.getElementById('chartShots'),{type:'doughnut',data:{labels:['Goals','Shots On Goal','Shots Off Goal'],datasets:[{data:[sum(data,'goals'),sum(data,'shotOn'),sum(data,'shotOff')],backgroundColor:['rgba(46,213,115,.85)','rgba(0,229,255,.7)','rgba(0,229,255,.25)'],borderColor:'#1a2235',borderWidth:3}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:tc,font:{family:'DM Sans',size:12}}}}}});
+
+    charts.possession=new Chart(document.getElementById('chartPossession'),{type:'bar',data:{labels,datasets:[
+      {label:'Ground Balls',data:data.map(d=>d.groundballs),backgroundColor:'rgba(46,213,115,.7)',...cd},
+      {label:'Caused TOs',data:data.map(d=>d.causedTO),backgroundColor:'rgba(0,229,255,.7)',...cd},
+      {label:'Turnovers',data:data.map(d=>d.turnovers),backgroundColor:'rgba(255,71,87,.7)',...cd},
+      {label:'Clears',data:data.map(d=>d.clears),backgroundColor:'rgba(255,211,42,.5)',...cd},
+    ]},options:baseOpts()});
+
+    charts.discipline=new Chart(document.getElementById('chartDiscipline'),{type:'bar',data:{labels,datasets:[
+      {label:'Fouls',data:data.map(d=>d.fouls),backgroundColor:'rgba(255,211,42,.8)',...cd},
+      {label:'Offsides',data:data.map(d=>d.offsides),backgroundColor:'rgba(255,71,87,.7)',...cd},
+    ]},options:baseOpts()});
+
+    charts.efficiency=new Chart(document.getElementById('chartEfficiency'),{type:'line',data:{labels,datasets:[{label:'Shooting %',data:data.map(d=>{const t=d.goals+d.shotOn+d.shotOff;return t>0?Math.round(d.goals/t*100):0;}),borderColor:'rgba(46,213,115,.9)',backgroundColor:'rgba(46,213,115,.1)',pointBackgroundColor:'rgba(46,213,115,1)',pointRadius:5,tension:.3,fill:true}]},options:{responsive:true,plugins:{legend:{labels:{color:tc}}},scales:{x:{grid:{color:gc},ticks:{color:tc}},y:{grid:{color:gc},ticks:{color:tc,callback:v=>v+'%'},beginAtZero:true,max:100}}}});
+
+    document.getElementById('gameTableBody').innerHTML=data.map(d=>`<tr><td class="num">${d.game}</td><td>${d.tournament}</td><td>${d.opponent}</td><td>${d.date}</td><td class="num goal-cell">${d.goals}</td><td class="num">${d.shotOn}</td><td class="num">${d.shotOff}</td><td class="num assist-cell">${d.assists}</td><td class="num">${d.groundballs}</td><td class="num">${d.causedTO}</td><td class="num">${d.turnovers}</td><td class="num">${d.clears}</td><td class="num">${d.fouls}</td><td class="num">${d.offsides}</td></tr>`).join('');
+  }
+
+  loadData();
+</script>
+</body>
+</html>
